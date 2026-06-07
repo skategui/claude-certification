@@ -1,0 +1,18 @@
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# os
+.DS_Store
+
+# node / next (defense-in-depth; quizz-app has its own too)
+node_modules/
+.next/
+*.tsbuildinfo
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
