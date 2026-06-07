@@ -2,6 +2,8 @@
 
 An open-source, **free** preparation kit for the **Anthropic Claude certification**.
 
+👉 **Live app: [claude-certification.vercel.app](https://claude-certification.vercel.app/)**
+
 It bundles three things in one repo:
 
 1. A **question bank** of 520 questions across every exam topic.
@@ -71,6 +73,8 @@ Open **http://localhost:3000**.
 ---
 
 ## Deploy (Vercel)
+
+Live deployment: **[claude-certification.vercel.app](https://claude-certification.vercel.app/)**
 
 This is a monorepo-style layout: the deployable app lives in `quizz-app/`, not the repo root.
 
