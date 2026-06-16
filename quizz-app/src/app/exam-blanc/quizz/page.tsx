@@ -2,15 +2,11 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  sampleQuestions,
-  scenarios,
-  domains,
-  type SampleQuestion,
-} from "@/lib/exam-blanc";
-import { extraQuestions } from "@/lib/exam-blanc-extra";
+import { scenarios, domains, type SampleQuestion } from "@/lib/exam-blanc";
+import { skillQuestions, drawRandom } from "@/lib/exam-blanc-skills";
 
-const allQuestions: SampleQuestion[] = [...sampleQuestions, ...extraQuestions];
+// Chaque session d'examen blanc = 60 questions tirées au hasard parmi les 240 du bank.
+const EXAM_SIZE = 60;
 
 type Phase = "idle" | "playing" | "results";
 
@@ -38,7 +34,8 @@ export default function ExamBlancQuizzPage() {
   const [answers, setAnswers] = useState<Answer[]>([]);
 
   const start = (shuffled: boolean) => {
-    setOrder(shuffled ? shuffle(allQuestions) : allQuestions);
+    const drawn = drawRandom(EXAM_SIZE);
+    setOrder(shuffled ? shuffle(drawn) : drawn);
     setIndex(0);
     setPicked(null);
     setRevealed(false);
@@ -99,12 +96,14 @@ const Idle = ({ onStart }: { onStart: (shuffled: boolean) => void }) => (
       Examen blanc officiel
     </h1>
     <p className="text-[var(--color-muted)] mb-2 max-w-2xl mx-auto">
-      {allQuestions.length} questions : 1 par compétence du guide officiel
-      Anthropic + questions tirées des 6 pages de domaines, avec explication
-      détaillée + takeaway après chaque réponse.
+      {EXAM_SIZE} questions tirées au hasard parmi les {skillQuestions.length}{" "}
+      du bank — une par compétence « Knowledge of » / « Skills in » du guide
+      officiel Anthropic, avec explication détaillée + takeaway après chaque
+      réponse.
     </p>
     <p className="text-sm text-[var(--color-muted)] mb-8">
-      Couvre les 6 scénarios. Score final + breakdown par scénario.
+      Chaque session retire un nouveau tirage. Score final + breakdown par
+      scénario.
     </p>
 
     <div className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
@@ -112,13 +111,13 @@ const Idle = ({ onStart }: { onStart: (shuffled: boolean) => void }) => (
         onClick={() => onStart(true)}
         className="px-6 py-4 rounded-full bg-[var(--color-primary)] text-white font-semibold shadow-lg shadow-indigo-200 hover:scale-105 transition-all"
       >
-        🎲 Démarrer (ordre mélangé)
+        🎲 Démarrer — 60 au hasard
       </button>
       <button
         onClick={() => onStart(false)}
         className="px-6 py-4 rounded-full bg-white ring-1 ring-[var(--color-border)] font-semibold hover:bg-[var(--color-primary-soft)] hover:text-[var(--color-primary)] transition-all"
       >
-        📖 Ordre original
+        📚 60 au hasard, par domaine
       </button>
     </div>
 

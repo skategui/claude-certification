@@ -10,11 +10,12 @@ import {
   outOfScope,
   prepSteps,
   keyPatterns,
-  sampleQuestions,
 } from "@/lib/exam-blanc";
-import { antiPatterns, extraQuestions } from "@/lib/exam-blanc-extra";
+import { antiPatterns } from "@/lib/exam-blanc-extra";
+import { skillQuestions } from "@/lib/exam-blanc-skills";
 
-const totalQuestions = sampleQuestions.length + extraQuestions.length;
+const BANK_SIZE = skillQuestions.length;
+const EXAM_SIZE = 60;
 
 type Tab =
   | "overview"
@@ -94,10 +95,11 @@ export default function ExamBlancPage() {
           href="/exam-blanc/quizz"
           className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-[var(--color-primary)] text-white font-semibold text-lg shadow-lg shadow-indigo-200 hover:shadow-indigo-300 hover:scale-105 transition-all duration-200"
         >
-          🚀 Démarrer l'examen blanc ({totalQuestions} questions)
+          🚀 Démarrer l'examen blanc ({EXAM_SIZE} questions)
         </Link>
         <p className="text-sm text-[var(--color-muted)] mt-3">
-          Questions tirées du guide officiel, avec explications après chaque
+          {EXAM_SIZE} questions tirées au hasard parmi un bank de {BANK_SIZE}{" "}
+          (une par compétence du guide officiel), avec explications après chaque
           réponse.
         </p>
       </div>
