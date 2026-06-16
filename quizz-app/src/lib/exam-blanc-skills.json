@@ -3838,5 +3838,277 @@
     "correctIndex": 1,
     "explanation": "On rend chaque type de contenu dans le format qui lui convient (tableaux pour le financier, prose pour l'actualité, listes structurées pour le technique) plutôt que d'imposer un format uniforme. Forcer un format unique — tout en prose ou tout en tableaux — dégrade la lisibilité et peut déformer l'information.",
     "takeaway": "Adapte le format au type de contenu (tableaux/prose/listes), ne convertis pas tout dans un format unique."
+  },
+  {
+    "id": 340,
+    "domainId": "agentic",
+    "scenarioId": "support",
+    "taskRef": "orig",
+    "question": "En production, dans 12 % des cas, l'agent saute l'appel à get_customer et appelle directement lookup_order avec seulement le nom du client, ce qui entraîne des comptes mal identifiés et des remboursements incorrects. Quelle est la correction la plus efficace ?",
+    "options": [
+      "Mettre en place un prérequis programmatique qui bloque lookup_order et process_refund tant que get_customer n'a pas retourné un customerId vérifié.",
+      "Renforcer le system prompt pour rendre la vérification du client obligatoire avant toute opération sur les commandes.",
+      "Ajouter des exemples few-shot où l'agent appelle toujours get_customer en premier, même lorsque le client fournit déjà les détails de sa commande.",
+      "Ajouter un classifieur de routage qui analyse la requête et n'active qu'un sous-ensemble de tools selon le type de demande."
+    ],
+    "correctIndex": 0,
+    "explanation": "Lorsqu'une séquence d'outils est requise pour une logique métier critique (vérifier l'identité avant un remboursement), l'enforcement programmatique offre des garanties déterministes. Le prompt et le few-shot ne produisent qu'une conformité probabiliste, insuffisante quand les erreurs ont un impact financier. Le classifieur de routage traite la disponibilité des tools, pas leur ordre d'appel.",
+    "takeaway": "Pour une règle stricte, utiliser des hooks ou des gates programmatiques, jamais le prompt seul."
+  },
+  {
+    "id": 341,
+    "domainId": "context",
+    "scenarioId": "support",
+    "taskRef": "orig",
+    "question": "L'agent atteint 55 % de résolution au premier contact, alors que la cible est de 80 %. Les logs montrent qu'il escalade des cas simples (remplacement standard avec photo) tout en tentant de traiter des cas complexes qui nécessitent des exceptions à la politique. Comment améliorer la calibration de l'escalade ?",
+    "options": [
+      "Définir des critères d'escalade explicites, complétés par des exemples few-shot dans le system prompt, indiquant quand escalader plutôt que résoudre.",
+      "Demander à l'agent d'auto-évaluer sa confiance (de 1 à 10) avant chaque réponse et router automatiquement vers un humain en dessous d'un seuil.",
+      "Entraîner un classifieur séparé sur les tickets historiques pour prédire les cas à escalader.",
+      "Utiliser une analyse de sentiment et escalader dès que la frustration du client dépasse un seuil."
+    ],
+    "correctIndex": 0,
+    "explanation": "Des critères explicites complétés par du few-shot s'attaquent à la cause racine : des frontières de décision floues. C'est une réponse proportionnée, à essayer avant d'ajouter de l'infrastructure. L'auto-évaluation de confiance d'un LLM est mal calibrée. Un classifieur de machine learning est sur-conçu tant que le prompt n'a pas été tenté. Le sentiment du client ne reflète pas la complexité du cas.",
+    "takeaway": "Calibrer l'escalade par des critères explicites et des exemples, sans recourir prématurément à un classifieur de machine learning."
+  },
+  {
+    "id": 342,
+    "domainId": "agentic",
+    "scenarioId": "research",
+    "taskRef": "orig",
+    "question": "Le sujet est « l'impact de l'IA sur les industries créatives ». Les sous-agents fonctionnent correctement pris individuellement, mais le rapport final ne couvre que les arts visuels (la musique, l'écriture et le cinéma manquent). Les logs du coordinateur montrent une décomposition en « AI digital art », « AI graphic design » et « AI photography ». Quelle est la cause racine ?",
+    "options": [
+      "L'agent de synthèse manque d'instructions pour identifier les lacunes de couverture.",
+      "La décomposition du coordinateur est trop étroite : les assignations des sous-agents ne couvrent pas tous les domaines.",
+      "L'agent de recherche web a formulé des requêtes pas assez exhaustives.",
+      "L'analyse de documents filtre les sources non visuelles (critère de pertinence trop restrictif)."
+    ],
+    "correctIndex": 1,
+    "explanation": "Les logs du coordinateur le révèlent directement : la décomposition se réduit aux arts visuels (digital art, graphic design, photography) et omet la musique, l'écriture et le cinéma. Les sous-agents traitent correctement le périmètre qui leur est assigné. Le problème réside dans ce qui leur a été assigné. Les options A, C et D accusent des composants en aval qui fonctionnent correctement dans leur périmètre.",
+    "takeaway": "La décomposition du coordinateur est le risque numéro un en multi-agent : la couverture prime sur la précision des sous-agents."
+  },
+  {
+    "id": 343,
+    "domainId": "tools",
+    "scenarioId": "research",
+    "taskRef": "orig",
+    "question": "L'agent de synthèse vérifie souvent des affirmations via le coordinateur, puis la recherche web, puis une nouvelle synthèse, ce qui ajoute 2 à 3 allers-retours et 40 % de latence. 85 % des vérifications sont de simples fact-checks (dates, noms, statistiques) et 15 % relèvent d'une investigation approfondie. Quelle approche est la plus efficace ?",
+    "options": [
+      "Donner à l'agent de synthèse un tool verify_fact à portée limitée pour les recherches simples, et router les cas complexes via le coordinateur.",
+      "Faire accumuler ses besoins par l'agent de synthèse, puis les renvoyer en lot au coordinateur en fin de passe.",
+      "Donner à l'agent de synthèse un accès complet à la recherche web pour gérer toute vérification directement.",
+      "Faire mettre en cache de façon proactive par l'agent de recherche web du contexte supplémentaire autour de chaque source."
+    ],
+    "correctIndex": 0,
+    "explanation": "L'option A applique le moindre privilège : l'agent de synthèse dispose juste de ce qu'il faut pour les 85 % de cas courants, et le pattern coordinateur est préservé pour les cas complexes. Le traitement en lot crée des dépendances bloquantes si des étapes de synthèse dépendent de faits vérifiés tôt. L'option C sur-provisionne et viole la séparation des responsabilités. L'option D repose sur un cache spéculatif qui ne peut pas prédire les besoins de façon fiable.",
+    "takeaway": "Donner des tools transverses à portée limitée pour les cas fréquents, et laisser le coordinateur router les cas complexes."
+  },
+  {
+    "id": 344,
+    "domainId": "prompt",
+    "scenarioId": "cicd",
+    "taskRef": "orig",
+    "question": "Tu veux réduire les coûts d'API. Tu as deux workflows : (1) un check pré-merge bloquant et temps réel (le développeur attend) et (2) un rapport de dette technique généré durant la nuit et relu le matin. Le manager propose de passer les deux sur la Message Batches API (50 % d'économie). Quelle est ton évaluation ?",
+    "options": [
+      "Utiliser la Batch API uniquement pour le rapport de dette technique, et conserver le temps réel pour le check pré-merge.",
+      "Basculer les deux workflows en mode batch avec un polling du statut.",
+      "Conserver le temps réel pour les deux afin d'éviter les problèmes d'ordering du batch.",
+      "Basculer les deux en mode batch, avec un fallback temps réel en cas de timeout."
+    ],
+    "correctIndex": 0,
+    "explanation": "La Batch API offre 50 % d'économie MAIS un délai pouvant aller jusqu'à 24 h, sans SLA de latence. Elle est donc inutilisable pour un check pré-merge bloquant, mais idéale pour un traitement de nuit. L'option B (« souvent rapide ») est inacceptable pour un workflow bloquant. L'option C repose sur l'idée fausse que l'ordering pose problème, alors qu'il est géré via custom_id. L'option D introduit une complexité inutile : chaque API doit être adaptée à son cas d'usage.",
+    "takeaway": "La Batch API est réservée aux traitements non bloquants ; custom_id sert à corréler requêtes et réponses."
+  },
+  {
+    "id": 345,
+    "domainId": "prompt",
+    "scenarioId": "cicd",
+    "taskRef": "orig",
+    "question": "Une PR modifie 14 fichiers. Une review en une seule passe donne des résultats incohérents : feedback détaillé sur certains fichiers, superficiel sur d'autres, bugs évidents manqués, et contradictions (un pattern signalé dans un fichier mais approuvé à l'identique ailleurs dans la même PR). Comment restructurer la review ?",
+    "options": [
+      "La découper en passes par fichier pour les problèmes locaux, plus une passe séparée d'intégration transverse aux fichiers.",
+      "Forcer les développeurs à découper la PR en soumissions de 3 à 4 fichiers.",
+      "Passer à un modèle de tier supérieur doté d'une fenêtre de contexte plus large.",
+      "Effectuer 3 passes indépendantes et ne signaler que les problèmes présents dans 2 passes sur 3."
+    ],
+    "correctIndex": 0,
+    "explanation": "Le découpage s'attaque à la cause racine : la dilution de l'attention sur de nombreux fichiers. Une analyse fichier par fichier garantit une profondeur constante, et une passe d'intégration transverse capture les problèmes de flux de données. L'option B reporte la charge sur le développeur sans corriger le système. L'option C repose sur une idée fausse : une fenêtre plus large n'améliore pas la qualité de l'attention. L'option D supprime la détection de vrais bugs en exigeant un consensus sur des problèmes parfois intermittents.",
+    "takeaway": "Pour les reviews volumineuses, combiner des passes par fichier et une passe d'intégration, plutôt qu'une seule passe."
+  },
+  {
+    "id": 346,
+    "domainId": "agentic",
+    "scenarioId": "devprod",
+    "taskRef": "orig",
+    "question": "La mission « ajouter des tests complets à un codebase legacy » présente un périmètre ouvert, des dépendances inconnues et des zones à risque inégales. Quelle stratégie de décomposition de tâche adopter ?",
+    "options": [
+      "Une décomposition dynamique et adaptative : cartographier la structure, identifier les zones à fort impact, et créer un plan priorisé qui s'adapte aux dépendances découvertes.",
+      "Un prompt chaining fixe : un pipeline séquentiel prédéfini, identique pour chaque fichier.",
+      "Un seul prompt massif demandant tous les tests du codebase d'un coup.",
+      "Une limite arbitraire de 5 fichiers par passe, traités dans l'ordre alphabétique."
+    ],
+    "correctIndex": 0,
+    "explanation": "Une tâche ouverte dont les sous-tâches dépendent de ce qu'on découvre appelle une décomposition dynamique et adaptative : cartographier d'abord, prioriser le fort impact, puis adapter au fil des dépendances. Le prompt chaining fixe convient aux reviews prévisibles multi-aspects, pas à l'exploration ouverte. Un prompt unique dilue l'attention, et une limite arbitraire ignore l'impact réel.",
+    "takeaway": "Pour une tâche ouverte, recourir à une décomposition dynamique ; réserver le pipeline fixe aux reviews prévisibles."
+  },
+  {
+    "id": 347,
+    "domainId": "agentic",
+    "scenarioId": "devprod",
+    "taskRef": "orig",
+    "question": "Après une analyse complète d'un codebase, tu veux comparer deux stratégies de refactoring divergentes en repartant de la même baseline d'analyse. Quel mécanisme utiliser ?",
+    "options": [
+      "fork_session, pour créer des branches d'exploration indépendantes à partir de la baseline d'analyse partagée.",
+      "--resume sur la même session nommée pour les deux stratégies, de façon séquentielle.",
+      "Démarrer deux sessions fraîches sans contexte et ré-analyser le codebase à chaque fois.",
+      "Lancer /compact, puis poser les deux questions de refactoring dans le même tour."
+    ],
+    "correctIndex": 0,
+    "explanation": "fork_session crée des branches indépendantes à partir d'une baseline partagée, ce qui est idéal pour explorer des approches divergentes (deux stratégies de refactoring) sans que l'une pollue l'autre. --resume poursuit UNE seule conversation linéaire, si bien que les deux stratégies se contamineraient. Repartir de zéro gaspille l'analyse. Lancer /compact dans un seul tour mélange les deux explorations.",
+    "takeaway": "Pour des branches divergentes à partir d'une baseline, utiliser fork_session ; --resume sert à une continuation linéaire."
+  },
+  {
+    "id": 348,
+    "domainId": "prompt",
+    "scenarioId": "cicd",
+    "taskRef": "orig",
+    "question": "La review CI génère trop de faux positifs dans les commentaires de code, ce qui érode la confiance des développeurs. Tu as déjà essayé « sois conservateur, ne signale que les findings haute confiance », sans effet. Quelle est la meilleure approche ?",
+    "options": [
+      "Des critères explicites et catégoriels : « signale un commentaire uniquement quand le comportement décrit contredit le comportement réel du code ».",
+      "Renforcer « sois conservateur » et ajouter « uniquement très haute confiance ».",
+      "Demander un score de confiance auto-reporté et filtrer en dessous d'un seuil.",
+      "Passer à un modèle de tier supérieur pour réduire les faux positifs."
+    ],
+    "correctIndex": 0,
+    "explanation": "Des critères explicites et catégoriels (« contredit le comportement réel » plutôt que « vérifie que les commentaires sont exacts ») améliorent la précision là où « sois conservateur » et « haute confiance » échouent : ces formulations vagues ne fournissent aucune frontière de décision. Le score de confiance d'un LLM est mal calibré. Un meilleur modèle ne corrige pas des critères flous.",
+    "takeaway": "Pour réduire les faux positifs, utiliser des critères explicites et catégoriels, pas « sois conservateur »."
+  },
+  {
+    "id": 349,
+    "domainId": "context",
+    "scenarioId": "devprod",
+    "taskRef": "orig",
+    "question": "Lors d'une session d'exploration de codebase longue, l'agent commence à donner des réponses incohérentes et référence des « patterns typiques » au lieu des classes spécifiques découvertes plus tôt. Quelle technique contre cette dégradation de contexte ?",
+    "options": [
+      "Faire maintenir à l'agent un fichier scratchpad des findings clés et l'y faire référer pour les questions suivantes.",
+      "Continuer en espérant que le modèle se souvienne, en baissant la température.",
+      "Tout recharger en relisant chaque fichier du codebase une nouvelle fois.",
+      "Augmenter le max_tokens pour étendre la fenêtre de contexte."
+    ],
+    "correctIndex": 0,
+    "explanation": "Le signe observé (« patterns typiques » au lieu de classes spécifiques) traduit la dégradation de contexte en session longue. Un fichier scratchpad persiste les findings clés à travers les frontières de contexte et sert de référence fiable. Espérer ou baisser la température ne persiste rien. Tout relire gaspille le contexte. Le max_tokens ne corrige pas la dégradation d'attention.",
+    "takeaway": "Face à la dégradation de contexte en session longue, utiliser un scratchpad de findings clés (ou des sous-agents / /compact)."
+  },
+  {
+    "id": 350,
+    "domainId": "agentic",
+    "scenarioId": "research",
+    "taskRef": "orig",
+    "question": "Dans un système hub-and-spoke où un coordinateur délègue à un market_researcher et un tech_analyst, comment devez-vous passer le contexte à chaque subagent ?",
+    "options": [
+      "Transmettre l'historique complet de conversation du coordinateur à chaque subagent pour qu'il dispose de toute l'information",
+      "Découper en sous-tâches extrêmement étroites et nombreuses pour que chaque subagent ne voie presque rien",
+      "Passer à chaque subagent uniquement le contexte spécifique à sa sous-tâche assignée",
+      "Ne fournir aucun contexte explicite car les subagents héritent automatiquement des connaissances du coordinateur"
+    ],
+    "correctIndex": 2,
+    "explanation": "La règle de passage de contexte impose de ne transmettre que le contexte propre à la sous-tâche : l'isolation de contexte économise des tokens et évite de noyer le subagent. Partager l'historique complet (option 0) est le anti-pattern de pollution de contexte (90% non pertinent). Le découpage trop étroit crée des lacunes de couverture, et les subagents n'héritent jamais implicitement du contexte — il faut le fournir explicitement.",
+    "takeaway": "Chaque subagent ne reçoit que le contexte de sa sous-tâche, jamais l'historique complet du coordinateur."
+  },
+  {
+    "id": 351,
+    "domainId": "tools",
+    "scenarioId": "support",
+    "taskRef": "orig",
+    "question": "Un outil `lookup_customer` ne parvient pas a joindre la base de donnees (timeout) lors d'une recherche client : que doit renvoyer l'outil a l'agent ?",
+    "options": [
+      "Un tableau vide `[]` avec `isError: false`, puisque aucun client n'a ete trouve",
+      "Une reponse structuree avec `isError: true`, `errorCategory: \"timeout\"`, `isRetryable: true` et un champ `context`",
+      "Un message generique `\"Operation failed\"` sans champs structures",
+      "Une chaine vide pour laisser l'agent supposer qu'il n'y a aucun client"
+    ],
+    "correctIndex": 1,
+    "explanation": "Une panne d'acces (la recherche n'a PAS ete effectuee) doit renvoyer `isError: true` avec `errorCategory`, `isRetryable` et `context`, pour que l'agent puisse reessayer ou escalader. Renvoyer `[]`/`isError: false` confond panne d'acces et resultat vide (anti-pattern le plus teste : l'agent croirait qu'aucun client n'existe), et `\"Operation failed\"` masque le contexte utile.",
+    "takeaway": "Panne d'acces = `isError: true`; resultat vide reel = `isError: false` : ne jamais maquiller une panne en tableau vide."
+  },
+  {
+    "id": 352,
+    "domainId": "tools",
+    "scenarioId": "support",
+    "taskRef": "orig",
+    "question": "Un agent de support unique dispose de 18 outils et choisit regulierement le mauvais (`search_customers` vs `find_customer` vs `lookup_user`) : quelle est la meilleure correction selon les bonnes pratiques ?",
+    "options": [
+      "Forcer `tool_choice: \"any\"` pour obliger l'agent a toujours utiliser un outil",
+      "Supprimer les descriptions des outils pour economiser du contexte",
+      "Repartir les outils en 3-4 sous-agents specialises de 4-5 outils chacun derriere un coordinateur",
+      "Ajouter encore plus d'outils pour couvrir tous les cas possibles"
+    ],
+    "correctIndex": 2,
+    "explanation": "La qualite de selection se degrade au-dela de ~4-5 outils par agent et les outils quasi-dupliques creent de l'ambiguite ; la solution est de scoper les outils dans des sous-agents specialises (Customer/Order/Communication) derriere un coordinateur. `tool_choice: \"any\"` force seulement l'usage d'un outil sans resoudre l'ambiguite, supprimer les descriptions enleve la documentation que le modele utilise pour choisir, et ajouter des outils aggrave le probleme.",
+    "takeaway": "4-5 outils par agent : distribuer dans des sous-agents specialises, ne pas entasser ni masquer les descriptions."
+  },
+  {
+    "id": 353,
+    "domainId": "claudecode",
+    "scenarioId": "codegen",
+    "taskRef": "orig",
+    "question": "Pour outiller votre équipe avec une procédure de refactoring multi-fichiers qui explore tout le code mais ne doit ni polluer la session principale ni écrire au-delà de Read/Edit/Grep, quelle configuration Claude Code choisissez-vous ?",
+    "options": [
+      "Une slash command dans .claude/commands/refactor.md décrivant le refactoring, car elle est partageable via git",
+      "Un skill .claude/skills/refactor/SKILL.md avec frontmatter context: fork et allowed-tools: [Read, Edit, Grep]",
+      "Un skill SKILL.md avec context: fork mais sans allowed-tools, pour laisser Claude utiliser tous les outils",
+      "Une règle dans .claude/rules/ avec un glob paths ciblant les fichiers à refactorer"
+    ],
+    "correctIndex": 1,
+    "explanation": "Une tâche complexe exigeant isolation de contexte ET restriction d'outils appelle un skill : context: fork isole l'exploration de la session principale et allowed-tools borne l'accès. La slash command (option 0) tourne dans le contexte courant sans isolation — c'est l'anti-pattern exact du SKILL.md de la page. Le skill sans allowed-tools (option 2) est l'anti-pattern 'overly broad tool access', et une règle .claude/rules/ (option 3) configure du contexte, elle n'exécute pas une procédure.",
+    "takeaway": "Isolation ou restriction d'outils requise = skill avec context: fork + allowed-tools, jamais une command."
+  },
+  {
+    "id": 354,
+    "domainId": "claudecode",
+    "scenarioId": "cicd",
+    "taskRef": "orig",
+    "question": "Dans un pipeline GitHub Actions qui demande à Claude de relire chaque diff de pull request avant merge, comment configurez-vous la revue pour obtenir un avis non biaisé et automatisable ?",
+    "options": [
+      "Réutiliser la session qui a généré le code pour relire le diff, afin que le relecteur garde tout le raisonnement",
+      "Lancer claude -p sur le diff dans une session séparée de la génération, avec --output-format json",
+      "Lancer Claude en mode interactif dans le job CI pour pouvoir poser des questions de suivi",
+      "Soumettre la revue via la Message Batches API pour économiser 50 % sur chaque PR"
+    ],
+    "correctIndex": 1,
+    "explanation": "Le relecteur doit tourner dans une session totalement séparée du générateur (claude -p, fresh) avec --output-format json pour parser le résultat : un relecteur sans contexte de génération donne un avis non biaisé. Réutiliser la session de génération (option 0) crée un biais de confirmation, le mode interactif (option 2) est interdit en CI, et la Batch API (option 3) avec sa fenêtre de 24 h ne convient pas à une revue de PR bloquante.",
+    "takeaway": "En CI : -p + --output-format json, et toujours isoler la session du relecteur de celle du générateur."
+  },
+  {
+    "id": 355,
+    "domainId": "context",
+    "scenarioId": "support",
+    "taskRef": "orig",
+    "question": "Un agent de support reçoit un client en colère qui réclame uniquement un simple changement d'adresse, puis un autre cas où le modèle s'auto-évalue à une confiance de 0,6 sur une demande de remboursement de 80 $ ; lesquels doivent déclencher une escalade vers un humain ?",
+    "options": [
+      "Le client en colère, car un sentiment négatif signale une situation complexe à confier à un humain",
+      "Le cas à confiance 0,6, car sous le seuil de 0,7 le modèle reconnaît honnêtement son incertitude",
+      "Aucun des deux : le sentiment n'égale pas la complexité et la confiance auto-déclarée du modèle n'est pas fiable",
+      "Les deux, par prudence, puisque colère et faible confiance sont tous deux des signaux de risque"
+    ],
+    "correctIndex": 2,
+    "explanation": "Le page établit que le sentiment n'égale pas la complexité (un client en colère avec un simple changement d'adresse ne doit PAS être escaladé) et que la confiance auto-déclarée du modèle n'est pas fiable. Les options basées sur le sentiment ou sur un seuil de confiance reproduisent exactement les deux anti-patterns d'escalade marqués « ALWAYS wrong » ; les déclencheurs valides sont la demande explicite du client, un vide de politique, une limite de capacité ou un seuil métier dépassé.",
+    "takeaway": "On escalade sur des critères objectifs (demande explicite, vide de politique, seuil métier), jamais sur le sentiment ni sur la confiance auto-déclarée du modèle."
+  },
+  {
+    "id": 356,
+    "domainId": "context",
+    "scenarioId": "support",
+    "taskRef": "orig",
+    "question": "Sur un agent support client, vous devez définir quand transférer une conversation à un humain : quelle règle d'escalade retenez-vous ?",
+    "options": [
+      "Escalader dès que le ton du client est détecté comme énervé ou frustré",
+      "Escalader lorsque le score de confiance auto-déclaré du modèle passe sous un seuil",
+      "Escalader selon des critères objectifs : lacunes de politique, limites de capacité, demande explicite ou seuils métier",
+      "Escalader automatiquement après un nombre fixe d'itérations de la boucle agentique"
+    ],
+    "correctIndex": 2,
+    "explanation": "L'escalade doit reposer sur des critères objectifs (lacunes de politique, limites de capacité, demande explicite, seuils métier) car ils évitent les transferts inutiles tout en captant les vrais cas limites. Le sentiment n'égale pas la complexité de la tâche (un client énervé avec une demande simple n'a pas besoin d'humain), les scores de confiance auto-déclarés sont mal calibrés, et un plafond d'itérations ne reflète pas l'achèvement de la tâche.",
+    "takeaway": "Escalader sur des faits observables et des seuils métier, jamais sur le sentiment ni un score de confiance auto-déclaré."
   }
 ]
